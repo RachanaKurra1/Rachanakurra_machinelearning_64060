@@ -1,0 +1,123 @@
+---
+title: "Assignment 3"
+author: "Rachana"
+date: "2022-10-18"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#loading library functions
+library(caret)
+library(e1071)
+```
+```{r}
+# reading csv file
+UniversalBank = read.csv("UniversalBank.csv")
+data=UniversalBank
+head(UniversalBank)
+
+```
+
+```{r}
+#Coverting data to factor variables
+
+data$Personal.Loan=as.factor(data$Personal.Loan)
+data$Online=as.factor(data$Online)
+data$CreditCard=as.factor(data$CreditCard)
+```
+```{r}
+#splitting data into 60:40 ratio
+
+set.seed(280)
+
+split=createDataPartition(data$Personal.Loan,p=0.6,list=FALSE,times=1)
+train_data=data[split,]
+valid_data=data[-split,]
+head(train_data)
+```
+
+```{r}
+#Normalizing the data
+
+normalized=preProcess(train_data[,-c(10,13,14 )])
+train_normalized<-predict(normalized,train_data)
+
+head(train_normalized)
+```
+
+#A:Creating a pivot table with  online  as coloumn and credit card as row and 
+#Personal loan as secondary row
+```{r}
+table_A<-table(train_normalized$CreditCard,train_normalized$Personal.Loan,train_normalized$Online)
+prop1<-prop.table(table_A)
+View(prop1)
+View(table_A)
+```
+#the probability that the customer will accept the loan offer  given that he is having a bank credit card (CC = 1) and being an active user of online banking services (Online =1) 
+                                                                                  
+
+#B: P(loan=1/(cc=1,online=1))=52/(52+446) = 0.1044
+ 
+#C1: Pivot table with loan as row funtion and online as coloumn function
+
+```{r}  
+table_C1<-table(train_normalized$Personal.Loan,train_normalized$Online)
+View(table_C1)
+```
+
+#C2: Pivot table with loan as row function  and creditcard as coloumn function
+
+```{r}
+table_C2<-table(train_normalized$Personal.Loan,train_normalized$CreditCard)
+View(table_C2)
+```
+
+#Creating table for loan=1
+```{r}
+table_C3<-table(train_normalized$Personal.Loan)
+View(table_C3)
+prop<-prop.table(table_C3)
+View(prop)
+```
+#D: computing the given probabilities
+
+#i. P(CC = 1 | Loan = 1) (the proportion of credit card holders among the loan acceptors) =93/288=0.3229166
+
+
+#ii. P(Online = 1 | Loan = 1)= 175/288=0.607
+
+
+#iii. P(Loan = 1) (the proportion of loan acceptors)  =288/3000=0.096
+
+
+#iv. P(CC = 1 | Loan = 0)  =764/2712=0.2817
+
+
+#v. P(Online = 1 | Loan = 0) =1583/2712=0.58370   
+
+
+#vi. P(Loan = 0) =2712/3000=0.904
+
+
+#E : Computing NAIVE BAYES PROBABLITY: P(Loan=1|CC=1,Online=1)=0.1209
+
+
+#F:Values obtained from pivot table(B) is more accurate and precise than E
+#since they are calculated based on count or frequency directly from
+#the table
+
+#G :Running Naive Bayes Probability
+```{r}
+model<-naiveBayes(Personal.Loan~CreditCard+Online,data=train_normalized)
+model
+```
+
+# comparing naviebayes probability of manual calculations error and runoff error,Naive Bayes probablity is more accurate as the manually calculated values might have calculation errors.
+
+
