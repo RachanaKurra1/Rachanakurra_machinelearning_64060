@@ -1,0 +1,149 @@
+---
+title: "FML ASSIGNMENT-4"
+author: "Rachana"
+date: "2022-11-06"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*Loading the required packages*
+```{r}
+library("tidyverse")
+library("factoextra")
+library("ggplot2")
+library("dplyr")
+```
+
+*Loading the data*
+```{r}
+data <- read.csv("C:/Users/kurra/Downloads/Pharmaceuticals.csv")
+```
+
+
+
+#Normalization
+```{r}
+data.1 <- scale(data[,-c(1:2,12:14)])
+```
+
+#A.using only numerical variables (1-9) to cluster the 21 firms.
+
+#finding the optimal k
+```{r}
+wss <- fviz_nbclust(data.1,kmeans,method="wss")
+wss
+silhouette <- fviz_nbclust(data.1,kmeans,method="silhouette")
+silhouette
+```
+#The optimal k obtained through wss method is k = 2 , and  the optimal value obtained through silhouette method is k = 5.
+\newline
+
+#Formulation of clusters using K-Means with k = 2 (WSS)
+```{r}
+wss_kmeans <- kmeans(data.1,centers = 2,nstart=10)
+wss_kmeans
+```
+*Formulation of clusters using K-Means with k = 5 (Silhouette)*
+```{r}
+silhouette_kmeans <- kmeans(data.1,centers=5,nstart=10)
+silhouette_kmeans
+```
+#plotting cluster for WSS 
+```{r}
+fviz_cluster(wss_kmeans,data.1,main="Cluster_WSS")
+```
+#we got 2 clusters using WSS method of size 11,10
+\newline
+
+#plotting cluster for Silhouette
+```{r}
+fviz_cluster(silhouette_kmeans,data.1,main="Cluster_Silhouette")
+```
+#we got 5 clusters of size 4, 8, 5,  3 and 1`using silhouette
+\newline
+
+#grouping the clusters to the original data frame for analysis
+```{r}
+clusters_wss <- wss_kmeans$cluster
+clusters_silhouette <- silhouette_kmeans$cluster
+group1 <- cbind(data,clusters_wss)
+group2 <- cbind(data,clusters_silhouette)
+```
+
+#Aggregating the clusters to interpret wss
+```{r}
+interpret_wss<- aggregate(data.1,by=list(group1$clusters_wss),FUN="median")
+print(interpret_wss[,-1])
+```
+#Interpret the clusters with respect to numerical variables used in forming clusters.
+
+\newline
+#from first cluster we can tell that there is high cahnce of success rate by reffering to attributes : "Market Capital", ROE - Return on Expenditure, ROA - Return on Assets, Asset Turnover and Net Profit Margin. 
+
+\newline
+#from the second cluster, we can interpret that it is having poor performance metrics compared to the first cluster. Return on Expenditure (ROE), Return on Assets (ROA), Asset Turnover, Net Profit Margin are low.the risk level in here is high which can be concluded by beta and leverage values, as they are high in this frim. 
+
+#Aggregating the clusters to interpret the attribute Silhouette
+```{r}
+interpret_s <- aggregate(group2[,-c(1:2,12:14)],by=list(group2$clusters_silhouette),FUN="median")
+print(interpret_s[,-1])
+```
+#Interpret the clusters with respect to numerical variables used in forming clusters.
+
+\newline
+#The first cluster indicates that there is high risk in the firms since there is high beta and leverage and also market cap and net profit margin are low 
+
+\newline
+#The Second Cluster also indicate the same as the first one.
+
+\newline
+#Third Cluster indicates that it can fit properly for firm industry with less risks  as pE ratio and market capital is good
+\newline
+# fourth indicates less risk and high valued
+
+\newline 
+# fifth cluster indicates low returning vales.
+
+#c.Pattern in the clustrers with respect to numerical values (10-12)
+```{r}
+ggplot(group1,aes(x=clusters_wss,fill=Location)) + geom_bar()
+```
+#From the bars we can observe that for 2 clusters based on location we can interpret that pharmaceutical exchange are mostly US based. i.e. Cluster 1 have greater exchange ratio for US based companies.
+
+\newline
+
+##Pattern in the clustrers with respect to numerical values (10-12)
+```{r}
+ggplot(group2,aes(x=clusters_silhouette,fill=Location)) + geom_bar()
+```
+#here in sihouette method we can say that location based is similar to wss cluster. more clusters are US based. 
+\newline
+
+#majority of pharma locations are cluster1 and cluster2 and for pharma exchange is NYSE.
+
+#d.Naming for the clusters:
+
+#WSS:
+\newline
+#hold cluster- moderate risk
+#buy cluster- high risk
+
+#sihouette
+\newline
+
+#high risk
+#low market cap
+#moderate fit
+#high valued
+#low returns high investment
+
+
+
+
+
