@@ -12,7 +12,6 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-*Loading the required packages*
 ```{r}
 library("tidyverse")
 library("factoextra")
@@ -20,7 +19,7 @@ library("ggplot2")
 library("dplyr")
 ```
 
-*Loading the data*
+#read data
 ```{r}
 data <- read.csv("C:/Users/kurra/Downloads/Pharmaceuticals.csv")
 ```
