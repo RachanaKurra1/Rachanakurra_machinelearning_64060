@@ -1,0 +1,253 @@
+---
+title: "FML final project"
+author: "Rachana"
+date: "2022-12-04"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+```{r , echo=FALSE}
+knitr::opts_chunk$set(error = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(ISLR)
+library(tidyverse)
+library(NbClust)
+library(factoextra)
+```
+
+*loading the file*
+```{r}
+rawdata=read.csv("C:/Users/kurra/Downloads/fuel_receipts_costs_eia923 (3).csv")
+```
+*replacing empty values with 0*
+```{r}
+data1 =  rawdata                           # Duplicate data frame
+data1[data1 == ""] <- 0                    # Replace blank by 0
+View(data1)                                # Print updated data frame
+ 
+  
+``` 
+*omitting NA values*
+```{r}
+data2= na.omit(data1)
+```
+
+*considering 12000 data as a sample* 
+```{r}
+set.seed(1234)
+data3= sample_n(data2, 12000)
+view(data3)
+```
+
+
+
+*splitting the data into traning and test data*
+```{r}
+
+library(caret)
+set.seed(3456)
+Split_data= createDataPartition(data3$rowid, p = .75, list = FALSE,times = 1) 
+                                  
+train_data=data3[Split_data,]
+test_data=data3[-Split_data,]
+
+View(train_data)
+View(test_data)
+```
+
+*looking at the data distribution*
+```{r}
+library(corrplot)
+
+boxplot(train_data[, c(12,13,15,16,17,18,19,20,27,28)])
+#some variables had big ranges and outliers
+
+corrplot(cor(train_data[, c(12,13,15,16,17,18,19,20,27,28)]), method= "shade")
+#plotting correlation between different variables, sulfur content and heat produced shows a showing positive correlation relation and fuel received and heat produced shows negative correlation.
+```
+
+* Building the clustering model*
+```{r}
+
+
+#1- Use Kmeans clustering to identify clusters  
+
+#Normalizing variables related to purchases process  using z-score
+ncol(Split_data)
+
+fuel_cost_normalized =scale(train_data[, c(12,13,15,16,17,18,19,20,27,28)])
+head(fuel_cost_normalized)
+View(fuel_cost_normalized)
+
+
+
+#Finding the optimal k number using both Elbow method and Silouhette
+
+fviz_nbclust(fuel_cost_normalized, kmeans, method = "wss") 
+```
+```{r}
+ #elbow method
+wss<- kmeans(fuel_cost_normalized, centers= 2, nstart= 25)
+View(wss)
+wss$size # custer 1 is large size.
+wss$withinss#cluster 2 has least within cluster sum of squares 
+
+
+#plotting clusters
+fviz_cluster(wss, data = fuel_cost_normalized )
+
+
+#silhouoette method
+
+fviz_nbclust(fuel_cost_normalized, kmeans, method = "silhouette")
+
+
+silhouette=kmeans(fuel_cost_normalized,centers=2,nstart=25)
+
+fviz_cluster( silhouette, data = fuel_cost_normalized)
+```
+
+```{r}
+#Running cluster centroids to better understand the characteristics of each cluster
+df = as.data.frame(t(wss$centers)) %>% rename(Cluster1 = 1, Cluster2 =2)
+
+df1 = as.data.frame(t(silhouette$centers)) %>% rename(Cluster1 = 1, Cluster2 =2)
+ 
+```
+
+
+
+#Summary: Cluster 1  is the largest cluster with size of 4357 , has the  highest amount of fuel received units and moisture content. Cluster 2 has the highest amount of heat produced with less fuel received units, and has 2 nd highest amount of ash and 1 st highest sulfur content   To summarize, Cluster 1 is better in terms of ecologically and economically as it uses less ash and sulfur content with least fuel cost per heat produced and also cluster 2 is better in terms of heat produced.
+
+
+
+
+#library(cluster)
+#clusplot(fuel_cost_normalized, wss_kmeans$cluster, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=2, lines=0)
+```
+
+**Binding the cluster assignment to the original data frame for analysis,creating dataframe to combine clusters membership with original data including categorical variables to better understand clusters characteristics**
+```{r}
+clusters_wss <- wss$cluster
+clusters_silhouette <- silhouette$cluster
+fuel_model1 <- cbind(train_data,clusters_wss)
+fuel_model2 <- cbind(train_data,clusters_silhouette)
+
+fuel_model2=fuel_model2[,c(12,13,15,16,17,18,19,20,27,28,31)]
+View(fuel_model2)
+```
+
+
+library(dplyr)
+
+```{r}
+#mean value of the clusters to know the distribution
+mean_data=fuel_model2 %>% group_by(clusters_silhouette)%>% summarize(mean)
+View(mean_data)
+```
+
+
+*plotting the clusters for different variables *
+    
+
+
+
+*tells that as fuel cost is not much affected by sulfur content *
+
+library(ggplot2)
+
+ggplot(fuel_model1) +
+ aes(x = sulfur_content_pct, y = fuel_cost_per_mmbtu) +
+ geom_point(shape = "circle", 
+ size = 1.5, colour = "#112446") +
+ theme_minimal()
+
+ 
+
+*similarly  ash content has least effect on fuel price,as ash content increases fuel has less variance.*
+
+library(ggplot2)
+
+ggplot(fuel_model1) +
+ aes(x = fuel_cost_per_mmbtu, y = ash_content_pct) +
+ geom_point(shape = "circle", 
+ size = 1.5, colour = "#112446") +
+ theme_minimal()
+
+#here we can observe that most of fuel type used from clusters is coal
+
+library(ggplot2)
+
+ggplot(fuel_model1) +
+ aes(x = clusters_wss, fill = fuel_group_code) +
+ geom_histogram(bins = 16L) +
+ scale_fill_hue(direction = 1) +
+ theme_minimal()
+
+
+
+#from this we can conclude that fuel cost is most affected in cluster 3  and cluster 1 where the fuel cost is least affected in cluster 2 it uses chlorine content  
+library(ggplot2)
+
+ggplot(fuel_model1) +
+ aes(x = fuel_cost_per_mmbtu, y = clusters_wss) +
+ geom_point(shape = "circle", size = 1.5, 
+ colour = "#112446") +
+ theme_minimal()
+
+
+
+
+
+
+#using multiple linear regression for predidcting data
+```{r} 
+library(dplyr)
+library(caret)
+fuel_cost_normalized_testdata =scale(test_data[, c(12,13,15,16,17,18,19,20,27,28)])
+head(fuel_cost_normalized_testdata)
+View(fuel_cost_normalized_testdata)
+#Developing linear  regression  model using train data
+model= lm(fuel_cost_per_mmbtu~fuel_cost_normalized_testdata , data=test_data)
+
+summary(model)
+#Eliminating all the columns with p value greater than 5%( NULL hypothesis).Dependent variables with p value less than 5% has significance in predicting value for the predicted variable(here fuel_cost_per_mmbtu).
+new_data=fuel_cost_normalized_testdata[,c(1,4,5,7,8)]
+model1= lm(fuel_cost_per_mmbtu~new_data , data=test_data)
+summary(model1)
+
+#clusters for test data
+fviz_nbclust(fuel_cost_normalized_testdata, kmeans, method = "wss") +
+geom_vline(xintercept = 3, linetype = 2)
+
+wss_kmeans_testdata= kmeans(fuel_cost_normalized_testdata, centers= 2, nstart= 25)
+View(wss_kmeans_testdata)
+wss_kmeans_testdata$size # custer 1 has high
+wss_kmeans_testdata$withinss#cluster 2 has least within cluster sum of squares
+
+ 
+
+fviz_nbclust(fuel_cost_normalized_testdata, kmeans, method = "silhouette")
+
+silhouette_kmeans=kmeans(fuel_cost_normalized_testdata,centers=2,nstart=25)
+silhouette_kmeans
+
+#plotting cluster
+fviz_cluster(wss_kmeans_testdata, data = fuel_cost_normalized_testdata )
+
+varImp(model1, scale = FALSE)
+
+value_To_Predict<-model1[c(1,4,5,7,8)]
+
+Prob<-predict(model1, data = value_To_Predict, type = "response")
+Pred_data<-ifelse(Prob>0.3,"yes","no")
+
+head(Pred_data)
+```
+
+
